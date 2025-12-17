@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Lead, QuoteItem, Quote } from '../types';
 import { X, Sparkles, Send, Brain, ArrowRight, Receipt, FileText, Mail, Save, Plus, Trash2 } from 'lucide-react';
-import { analyzeLead, LeadAnalysis, generateQuoteSuggestion, generateQuote } from '../services/gemini';
+import { aiAPI } from '../services/api';
+import { useToast } from './Toast';
+
+interface LeadAnalysis {
+  score: number;
+  summary: string;
+  nextAction: string;
+  dealProbability: string;
+}
 
 interface LeadDetailProps {
   lead: Lead;
@@ -13,10 +21,11 @@ interface LeadDetailProps {
 export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'email', onClose, onSaveQuote }) => {
   const [analysis, setAnalysis] = useState<LeadAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
-  
+  const { showToast } = useToast();
+
   // Tabs: 'email' or 'quote'
   const [activeTab, setActiveTab] = useState<'email' | 'quote'>(initialTab);
-  
+
   const [emailDraft, setEmailDraft] = useState<string>("");
   const [generatingEmail, setGeneratingEmail] = useState(false);
 
@@ -26,25 +35,48 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
   useEffect(() => {
     const runAnalysis = async () => {
       setLoading(true);
-      const result = await analyzeLead(lead);
-      setAnalysis(result);
-      setLoading(false);
+      try {
+        const result = await aiAPI.analyzeLead(lead);
+        setAnalysis(result.fallback || result);
+      } catch (error: any) {
+        showToast(error.message || 'Erreur lors de l\'analyse', 'error');
+        setAnalysis({
+          score: 50,
+          summary: "Impossible d'analyser le lead pour le moment.",
+          nextAction: "Revue manuelle",
+          dealProbability: "Inconnu"
+        });
+      } finally {
+        setLoading(false);
+      }
     };
     runAnalysis();
   }, [lead]);
 
   const handleGenerateEmail = async () => {
       setGeneratingEmail(true);
-      const draft = await generateQuoteSuggestion(lead);
-      setEmailDraft(draft);
-      setGeneratingEmail(false);
+      try {
+        const result = await aiAPI.generateEmail(lead);
+        setEmailDraft(result.emailDraft);
+        showToast('Email généré avec succès', 'success');
+      } catch (error: any) {
+        showToast(error.message || 'Erreur lors de la génération de l\'email', 'error');
+      } finally {
+        setGeneratingEmail(false);
+      }
   }
 
   const handleGenerateQuote = async () => {
       setGeneratingQuote(true);
-      const items = await generateQuote(lead);
-      setQuoteItems(items);
-      setGeneratingQuote(false);
+      try {
+        const result = await aiAPI.generateQuote(lead);
+        setQuoteItems(result.items);
+        showToast('Devis généré avec succès', 'success');
+      } catch (error: any) {
+        showToast(error.message || 'Erreur lors de la génération du devis', 'error');
+      } finally {
+        setGeneratingQuote(false);
+      }
   }
 
   const handleManualQuote = () => {
@@ -61,10 +93,10 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
         const valStr = value.toString();
         // Allow empty string for better UX during typing
         const numValue = valStr === '' ? 0 : parseFloat(valStr);
-        
+
         if (field === 'quantity') item.quantity = numValue;
         if (field === 'unitPrice') item.unitPrice = numValue;
-        
+
         item.total = (item.quantity || 0) * (item.unitPrice || 0);
     }
 
@@ -81,7 +113,10 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
   };
 
   const handleSaveQuoteToCRM = () => {
-      if (quoteItems.length === 0) return;
+      if (quoteItems.length === 0) {
+        showToast('Ajoutez au moins un article au devis', 'error');
+        return;
+      }
 
       const totalAmount = quoteItems.reduce((acc, item) => acc + item.total, 0);
       const newQuote: Quote = {
@@ -93,7 +128,7 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
       };
 
       onSaveQuote(lead.id, newQuote);
-      alert("Devis enregistré avec succès !");
+      showToast('Devis enregistré avec succès !', 'success');
   };
 
   const quoteTotal = quoteItems.reduce((acc, item) => acc + item.total, 0);
@@ -101,9 +136,10 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
   return (
     <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-0 md:p-8">
       <div className="bg-white dark:bg-[#1E1E1E] w-full max-w-5xl h-full md:h-[85vh] rounded-none md:rounded-[40px] shadow-2xl overflow-hidden flex flex-col md:flex-row animate-slide-in relative transition-colors">
-        <button 
-            onClick={onClose} 
+        <button
+            onClick={onClose}
             className="absolute top-4 right-4 md:top-6 md:right-6 z-20 w-8 h-8 md:w-10 md:h-10 bg-white/50 dark:bg-black/50 backdrop-blur hover:bg-white dark:hover:bg-black rounded-full flex items-center justify-center transition-all"
+            aria-label="Fermer"
         >
             <X className="w-5 h-5 text-black dark:text-white" />
         </button>
@@ -111,7 +147,7 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
         {/* Left: AI & Dark Mode Insights (Mobile: Top, Desktop: Left) */}
         <div className="w-full md:w-2/5 bg-[#121212] text-white p-6 md:p-10 flex flex-col relative overflow-hidden shrink-0">
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#B4F481] rounded-full blur-[100px] opacity-10"></div>
-            
+
             <div className="relative z-10 flex flex-col h-full">
                 <div className="flex items-center gap-3 mb-6 md:mb-8">
                     <div className="w-8 h-8 md:w-10 md:h-10 bg-[#B4F481] rounded-full flex items-center justify-center">
@@ -183,13 +219,13 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
 
             {/* AI Generator Tabs */}
             <div className="flex gap-2 mb-4 p-1 bg-gray-100 dark:bg-white/5 rounded-full w-fit">
-                <button 
+                <button
                     onClick={() => setActiveTab('email')}
                     className={`px-3 md:px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-all ${activeTab === 'email' ? 'bg-white dark:bg-white/10 shadow-sm text-black dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'}`}
                 >
                     <Mail className="w-3 h-3" /> Email
                 </button>
-                <button 
+                <button
                     onClick={() => setActiveTab('quote')}
                     className={`px-3 md:px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-all ${activeTab === 'quote' ? 'bg-white dark:bg-white/10 shadow-sm text-black dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'}`}
                 >
@@ -200,12 +236,12 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
             {/* Tab Content */}
             <div className="flex-1 border border-gray-100 dark:border-white/10 rounded-[24px] md:rounded-[32px] p-1 shadow-sm relative min-h-[300px]">
                 <div className="bg-gray-50 dark:bg-white/5 rounded-[20px] md:rounded-[28px] p-4 md:p-6 h-full flex flex-col">
-                    
+
                     {activeTab === 'email' && (
                         <>
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="font-medium text-sm md:text-base text-gray-900 dark:text-white">Rédaction Intelligente</h3>
-                                <button 
+                                <button
                                     onClick={handleGenerateEmail}
                                     disabled={generatingEmail}
                                     className="text-xs bg-black dark:bg-white dark:text-black text-white px-3 md:px-4 py-2 rounded-full flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50"
@@ -216,7 +252,7 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
                             </div>
                             {emailDraft ? (
                                 <div className="animate-slide-in flex-1 flex flex-col">
-                                    <textarea 
+                                    <textarea
                                         className="w-full flex-1 bg-white dark:bg-[#1E1E1E] p-4 rounded-xl border border-gray-200 dark:border-white/10 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10 resize-none mb-3 min-h-[200px]"
                                         value={emailDraft}
                                         onChange={(e) => setEmailDraft(e.target.value)}
@@ -241,7 +277,7 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
                              <div className="flex justify-between items-center mb-4">
                                 <h3 className="font-medium text-sm md:text-base text-gray-900 dark:text-white">Générateur de Devis</h3>
                                 <div className="flex gap-2">
-                                    <button 
+                                    <button
                                         onClick={handleGenerateQuote}
                                         disabled={generatingQuote}
                                         className="text-xs bg-black dark:bg-white dark:text-black text-white px-3 md:px-4 py-2 rounded-full flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50"
@@ -272,8 +308,8 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
                                                 {quoteItems.map((item, idx) => (
                                                     <tr key={idx} className="group">
                                                         <td className="py-2">
-                                                            <input 
-                                                                type="text" 
+                                                            <input
+                                                                type="text"
                                                                 value={item.description}
                                                                 onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
                                                                 className="w-full bg-transparent outline-none border-b border-transparent focus:border-black dark:focus:border-white py-1 placeholder-gray-300 text-gray-900 dark:text-white"
@@ -281,8 +317,8 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
                                                             />
                                                         </td>
                                                         <td className="py-2">
-                                                            <input 
-                                                                type="number" 
+                                                            <input
+                                                                type="number"
                                                                 value={item.quantity}
                                                                 onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
                                                                 className="w-full bg-transparent outline-none border-b border-transparent focus:border-black dark:focus:border-white py-1 text-center text-gray-900 dark:text-white"
@@ -290,8 +326,8 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
                                                             />
                                                         </td>
                                                         <td className="py-2">
-                                                            <input 
-                                                                type="number" 
+                                                            <input
+                                                                type="number"
                                                                 value={item.unitPrice}
                                                                 onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
                                                                 className="w-full bg-transparent outline-none border-b border-transparent focus:border-black dark:focus:border-white py-1 text-right text-gray-900 dark:text-white"
@@ -302,9 +338,10 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
                                                             €{item.total.toLocaleString()}
                                                         </td>
                                                         <td className="py-2 text-center">
-                                                            <button 
+                                                            <button
                                                                 onClick={() => removeItem(idx)}
                                                                 className="text-gray-300 hover:text-red-500 md:opacity-0 md:group-hover:opacity-100 transition-all p-1"
+                                                                aria-label="Supprimer"
                                                             >
                                                                 <Trash2 className="w-4 h-4" />
                                                             </button>
@@ -313,7 +350,7 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
                                                 ))}
                                             </tbody>
                                         </table>
-                                        <button 
+                                        <button
                                             onClick={addItem}
                                             className="mt-4 text-xs font-bold flex items-center gap-1 text-gray-400 hover:text-black dark:hover:text-white transition-colors"
                                         >
@@ -325,7 +362,7 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
                                         <span className="text-lg font-bold text-gray-900 dark:text-white">€{quoteTotal.toLocaleString()}</span>
                                     </div>
                                     <div className="p-4 pt-2 flex justify-end gap-2">
-                                         <button 
+                                         <button
                                             onClick={handleSaveQuoteToCRM}
                                             className="bg-black dark:bg-white dark:text-black text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-gray-200"
                                          >
@@ -343,7 +380,7 @@ export const LeadDetail: React.FC<LeadDetailProps> = ({ lead, initialTab = 'emai
                                         <span className="text-sm block">Aucun devis en cours</span>
                                     </div>
                                     <div className="flex gap-3">
-                                        <button 
+                                        <button
                                             onClick={handleManualQuote}
                                             className="px-4 py-2 bg-white dark:bg-[#1E1E1E] border border-gray-200 dark:border-white/20 rounded-full text-xs font-bold text-black dark:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                                         >
