@@ -80,3 +80,22 @@ export interface ChannelPerformance {
   visitors: number;
   conversionRate: number;
 }
+
+export interface Task {
+  id: string;
+  title: string;
+  type: 'call' | 'meeting' | 'email' | 'todo' | 'proposal';
+  date: string;
+  time?: string;
+  completed: boolean;
+  priority: boolean;
+  description?: string;
+  amount?: number;
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  time: string;
+  participants: string[];
+}

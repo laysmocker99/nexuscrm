@@ -5,12 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NexusGrowth CRM</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Plus Jakarta Sans', 'sans-serif'],
+            },
+          }
+        }
+      }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
       body { 
         font-family: 'Plus Jakarta Sans', sans-serif; 
-        background-color: #f2f2f2; 
-        color: #1a1a1a;
+        /* Background is handled by the App component */
       }
       /* Custom Scrollbar */
       .hide-scroll::-webkit-scrollbar { display: none; }
@@ -19,6 +30,9 @@
       .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
       .custom-scroll::-webkit-scrollbar-track { background: transparent; }
       .custom-scroll::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 3px; }
+      
+      /* Dark Mode Scrollbar Support */
+      .dark .custom-scroll::-webkit-scrollbar-thumb { background: #333; }
 
       /* Animation */
       @keyframes slideIn {
