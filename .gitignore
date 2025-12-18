@@ -25,8 +25,3 @@ dist-ssr
 
 # Environment variables
 .env
-backend/.env
-
-# Database
-backend/data/*.db
-backend/data/*.db-*
