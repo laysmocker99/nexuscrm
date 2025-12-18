@@ -1,0 +1,10 @@
+Pour activer le mode DEMO (sans backend) :
+
+1. Créer un fichier .env avec :
+   VITE_DEMO_MODE=true
+
+2. Le frontend utilisera les données mock de constants.ts
+3. L'authentification sera simplifiée
+4. Pas d'IA, mais navigation fonctionnelle
+
+Voulez-vous que je crée ce mode ?
