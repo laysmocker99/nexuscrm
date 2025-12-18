@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Lead, QuoteItem, Quote } from '../types';
 import { X, Sparkles, Send, Brain, ArrowRight, Receipt, FileText, Mail, Save, Plus, Trash2 } from 'lucide-react';
-import { aiAPI } from '../services/api';
+import { aiAPI } from '../services/supabase-api';
 import { useToast } from './Toast';
 
 interface LeadAnalysis {

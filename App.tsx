@@ -10,7 +10,7 @@ import { AnalyticsView } from './components/AnalyticsView';
 import { QuotesView } from './components/QuotesView';
 import { LoginPage } from './components/LoginPage';
 import { ToastProvider, useToast } from './components/Toast';
-import { authAPI, leadsAPI } from './services/api';
+import { authAPI, leadsAPI } from './services/supabase-api';
 import { Lead, LeadStatus, Quote, AcquisitionChannel } from './types';
 
 type View = 'dashboard' | 'pipeline' | 'leads' | 'analytics' | 'quotes' | 'settings';

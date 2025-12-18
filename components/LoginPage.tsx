@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, Mail, User, Loader } from 'lucide-react';
-import { authAPI } from '../services/api';
+import { authAPI } from '../services/supabase-api';
 import { useToast } from './Toast';
 
 interface LoginPageProps {
@@ -25,7 +25,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         await authAPI.login(email, password);
         showToast('Connexion réussie !', 'success');
       } else {
-        await authAPI.register(email, password, firstName, lastName);
+        await authAPI.register(email, password, { firstName, lastName });
         showToast('Compte créé avec succès !', 'success');
       }
       onLoginSuccess();
