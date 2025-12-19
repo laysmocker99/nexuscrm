@@ -10,6 +10,7 @@ import { AnalyticsView } from './components/AnalyticsView';
 import { QuotesView } from './components/QuotesView';
 import { LoginPage } from './components/LoginPage';
 import { ToastProvider, useToast } from './components/Toast';
+import { NewLeadModal } from './components/NewLeadModal';
 import { authAPI, leadsAPI } from './services/supabase-api';
 import { Lead, LeadStatus, Quote, AcquisitionChannel } from './types';
 
@@ -36,6 +37,9 @@ const AppContent: React.FC = () => {
   const [filterMinVal, setFilterMinVal] = useState<string>('');
   const [filterMaxVal, setFilterMaxVal] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Modal State
+  const [showNewLeadModal, setShowNewLeadModal] = useState(false);
 
   // Sort State
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'value', direction: 'desc' });
@@ -89,6 +93,30 @@ const AppContent: React.FC = () => {
       }
       return l;
     }));
+  };
+
+  const handleCreateLead = async (leadData: Partial<Lead>) => {
+    try {
+      const newLead = await leadsAPI.create({
+        firstName: leadData.firstName || '',
+        lastName: leadData.lastName || '',
+        email: leadData.email || '',
+        phone: leadData.phone || '',
+        company: leadData.company || '',
+        position: leadData.position || '',
+        channel: leadData.channel || 'Site Web Direct',
+        value: leadData.value || 0,
+        status: 'NOUVEAU' as LeadStatus,
+      });
+      setLeads(prev => [newLead, ...prev]);
+      setShowNewLeadModal(false);
+      showToast('Lead créé avec succès !', 'success');
+      loadLeads(); // Reload to get fresh data
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        showToast(error.message, 'error');
+      }
+    }
   };
 
   const handleSort = (key: SortKey) => {
@@ -292,12 +320,21 @@ const AppContent: React.FC = () => {
                   <h1 className="text-3xl md:text-4xl font-light tracking-tight text-black dark:text-white mb-1">Base Leads</h1>
                   <p className="text-gray-400">Filtrage et analyse de la base de données</p>
                 </div>
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={`px-4 py-2 rounded-full text-xs font-bold flex items-center justify-center gap-2 transition-all w-full md:w-auto ${showFilters ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-gray-300 hover:shadow-md'}`}
-                >
-                  <Filter className="w-3 h-3" /> Filtres Avancés
-                </button>
+                <div className="flex gap-3 w-full md:w-auto">
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className={`px-4 py-2 rounded-full text-xs font-bold flex items-center justify-center gap-2 transition-all flex-1 md:flex-none ${showFilters ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-white dark:bg-[#1E1E1E] text-gray-600 dark:text-gray-300 hover:shadow-md'}`}
+                  >
+                    <Filter className="w-3 h-3" /> Filtres Avancés
+                  </button>
+                  <button
+                    onClick={() => setShowNewLeadModal(true)}
+                    className="bg-black dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 text-white px-6 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-all shadow-lg hover:shadow-xl flex-1 md:flex-none justify-center"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Nouveau Lead
+                  </button>
+                </div>
               </div>
 
               {showFilters && (
@@ -523,6 +560,8 @@ const AppContent: React.FC = () => {
           onSaveQuote={handleSaveQuote}
         />
       )}
+
+      {showNewLeadModal && <NewLeadModal onClose={() => setShowNewLeadModal(false)} onCreate={handleCreateLead} />}
     </div>
   );
 };
