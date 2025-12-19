@@ -19,7 +19,8 @@ type SortKey = 'name' | 'value' | 'status' | 'channel';
 type SortDirection = 'asc' | 'desc';
 
 const AppContent: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(authAPI.isAuthenticated());
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ email: string; firstName?: string; lastName?: string } | null>(null);
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -52,6 +53,31 @@ const AppContent: React.FC = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [isDarkMode]);
+
+  // Check authentication on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const session = await authAPI.getSession();
+        if (session?.user) {
+          setIsAuthenticated(true);
+          const userData = await authAPI.getCurrentUser();
+          setCurrentUser({
+            email: userData.email,
+            firstName: userData.user_metadata?.firstName,
+            lastName: userData.user_metadata?.lastName,
+          });
+        } else {
+          setIsAuthenticated(false);
+          setCurrentUser(null);
+        }
+      } catch (error) {
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+      }
+    };
+    checkAuth();
+  }, []);
 
   // Load leads from API
   useEffect(() => {
@@ -135,9 +161,27 @@ const AppContent: React.FC = () => {
     setFilterMaxVal('');
   };
 
-  const handleLogout = () => {
-    authAPI.logout();
+  const handleLoginSuccess = async () => {
+    try {
+      const session = await authAPI.getSession();
+      if (session?.user) {
+        setIsAuthenticated(true);
+        const userData = await authAPI.getCurrentUser();
+        setCurrentUser({
+          email: userData.email,
+          firstName: userData.user_metadata?.firstName,
+          lastName: userData.user_metadata?.lastName,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    await authAPI.logout();
     setIsAuthenticated(false);
+    setCurrentUser(null);
     setLeads([]);
     showToast('Déconnexion réussie', 'info');
   };
@@ -219,7 +263,7 @@ const AppContent: React.FC = () => {
   };
 
   if (!isAuthenticated) {
-    return <LoginPage onLoginSuccess={() => setIsAuthenticated(true)} />;
+    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
@@ -249,6 +293,26 @@ const AppContent: React.FC = () => {
         </nav>
 
         <div className="mt-auto flex flex-col md:items-center lg:items-stretch lg:px-2 gap-2">
+          {/* User Profile Section */}
+          {currentUser && (
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 mb-2">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-black to-gray-600 dark:from-white dark:to-gray-300 flex items-center justify-center shadow-sm shrink-0">
+                <span className="text-white dark:text-black font-bold text-sm">
+                  {currentUser.firstName?.[0]?.toUpperCase() || currentUser.email[0].toUpperCase()}
+                  {currentUser.lastName?.[0]?.toUpperCase() || ''}
+                </span>
+              </div>
+              <div className="hidden lg:block text-left flex-1 min-w-0">
+                <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                  {currentUser.firstName && currentUser.lastName
+                    ? `${currentUser.firstName} ${currentUser.lastName}`
+                    : currentUser.email}
+                </p>
+                <p className="text-[10px] text-gray-400 truncate">Connecté</p>
+              </div>
+            </div>
+          )}
+
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
             className="group flex items-center gap-3 p-3 rounded-xl hover:bg-white dark:hover:bg-[#1a1a1a] hover:shadow-sm transition-all text-gray-500 dark:text-gray-400"
