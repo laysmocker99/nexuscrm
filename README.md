@@ -70,6 +70,14 @@ VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
+### 4. Mode Démo (Sans Backend)
+
+Si vous ne configurez pas les variables d'environnement Supabase, l'application se lancera automatiquement en **Mode Démo**.
+
+- Utilise `localStorage` pour simuler une base de données
+- Données persistantes tant que vous ne videz pas le cache du navigateur
+- Idéal pour tester l'interface et les fonctionnalités sans configuration complexe
+
 ## 🚀 Démarrage
 
 ### Démarrer le frontend en local
@@ -143,9 +151,22 @@ nexuscrm/
 - **React 19** - Framework UI
 - **TypeScript** - Typage statique
 - **Vite** - Build tool
+- **Vitest** - Tests unitaires
 - **Tailwind CSS** - Styling
 - **Lucide React** - Icônes
 - **@supabase/supabase-js** - Client Supabase
+
+## ✅ Tests
+
+Le projet inclut des tests unitaires pour valider la logique métier et l'API mockée.
+
+```bash
+# Lancer les tests
+npm run test
+
+# Lancer les tests en mode watch
+npm run test:watch
+```
 
 ## 📚 Structure des données (PostgreSQL)
 

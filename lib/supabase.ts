@@ -3,11 +3,19 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables. Please check your .env file.');
+export const isDemoMode = !supabaseUrl || !supabaseAnonKey;
+
+if (isDemoMode) {
+  console.warn('⚠️ Supabase environment variables missing. Application running in DEMO MODE.');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// In Demo Mode, we still need to export a valid-looking client to avoid crashes on import,
+// but we won't actually use it in the API layer.
+// We use a dummy URL/Key if missing to satisfy createClient, but we must ensure we don't make network calls.
+const url = supabaseUrl || 'https://demo.supabase.co';
+const key = supabaseAnonKey || 'demo-key';
+
+export const supabase = createClient(url, key);
 
 // Database types for TypeScript
 export type Lead = {
@@ -43,6 +51,7 @@ export type Task = {
   description?: string;
   amount?: number;
   created_at: string;
+  updated_at?: string;
 };
 
 export type Quote = {
