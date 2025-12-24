@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   LayoutGrid, Kanban, Users, Settings, BarChart2, Plus, Receipt,
-  ArrowUpDown, ChevronDown, ChevronUp, Filter, Search, X, LogOut, Moon, Sun
+  ArrowUpDown, ChevronDown, ChevronUp, Filter, Search, X, LogOut, Moon, Sun, Loader
 } from 'lucide-react';
 import { Dashboard } from './components/Dashboard';
 import { Pipeline } from './components/Pipeline';
@@ -13,13 +13,15 @@ import { ToastProvider, useToast } from './components/Toast';
 import { NewLeadModal } from './components/NewLeadModal';
 import { authAPI, leadsAPI } from './services/supabase-api';
 import { Lead, LeadStatus, Quote, AcquisitionChannel } from './types';
+import { isDemoMode } from './lib/supabase';
 
 type View = 'dashboard' | 'pipeline' | 'leads' | 'analytics' | 'quotes' | 'settings';
 type SortKey = 'name' | 'value' | 'status' | 'channel';
 type SortDirection = 'asc' | 'desc';
 
 const AppContent: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(authAPI.isAuthenticated());
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -43,6 +45,22 @@ const AppContent: React.FC = () => {
 
   // Sort State
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'value', direction: 'desc' });
+
+  // Check Auth on Mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const isAuth = await authAPI.isAuthenticated();
+        setIsAuthenticated(isAuth);
+      } catch (error) {
+        console.error("Auth check failed", error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsAuthChecking(false);
+      }
+    };
+    checkAuth();
+  }, []);
 
   // Dark Mode Effect
   useEffect(() => {
@@ -218,6 +236,14 @@ const AppContent: React.FC = () => {
     );
   };
 
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F2F2F2] dark:bg-[#121212]">
+        <Loader className="w-8 h-8 animate-spin text-black dark:text-white" />
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return <LoginPage onLoginSuccess={() => setIsAuthenticated(true)} />;
   }
@@ -279,6 +305,12 @@ const AppContent: React.FC = () => {
 
       <main className="flex-1 w-full md:rounded-[32px] bg-white/50 dark:bg-[#1a1a1a] backdrop-blur-3xl shadow-sm border-0 md:border border-white/60 dark:border-white/5 relative overflow-hidden flex flex-col h-screen md:h-auto transition-all duration-300">
         <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-white to-transparent dark:from-white/5 dark:to-transparent opacity-60 pointer-events-none"></div>
+
+        {isDemoMode && (
+          <div className="bg-yellow-500 text-black text-center text-xs font-bold py-1 z-50 sticky top-0">
+            MODE DÉMO: Les données sont locales et ne seront pas synchronisées avec le serveur.
+          </div>
+        )}
 
         <div className="relative z-10 flex-1 overflow-y-auto custom-scroll p-4 md:p-8 mb-16 md:mb-0">
           {currentView === 'dashboard' && <Dashboard onOpenLead={(l) => { setSelectedLead(l); setLeadDetailInitialTab('email'); }} />}

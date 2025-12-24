@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Lock, Mail, User, Loader } from 'lucide-react';
+import { Lock, Mail, User, Loader, AlertCircle } from 'lucide-react';
 import { authAPI } from '../services/supabase-api';
 import { useToast } from './Toast';
+import { isDemoMode } from '../lib/supabase';
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
@@ -49,6 +50,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <h1 className="text-3xl font-light text-white mb-2 tracking-tight">NexusGrowth</h1>
           <p className="text-gray-400 text-sm">CRM Intelligence Platform</p>
         </div>
+
+        {isDemoMode && (
+          <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-xl p-3 mb-6 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+            <div className="text-left">
+              <h3 className="text-yellow-500 font-bold text-sm">Mode Démo Actif</h3>
+              <p className="text-yellow-200/80 text-xs mt-1">
+                L'application fonctionne en mode démonstration locale. Entrez n'importe quel email/mot de passe pour tester. Les données sont sauvegardées temporairement dans votre navigateur.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Form Card */}
         <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
@@ -152,7 +165,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           {isLogin && (
             <div className="mt-4 text-center">
               <p className="text-xs text-gray-400">
-                Compte de test : <span className="text-white font-mono">admin@nexuscrm.com</span> / <span className="text-white font-mono">admin123</span>
+                {isDemoMode ? (
+                  <>Utilisez n'importe quel email et mot de passe pour tester.</>
+                ) : (
+                  <>Compte de test : <span className="text-white font-mono">admin@nexuscrm.com</span> / <span className="text-white font-mono">admin123</span></>
+                )}
               </p>
             </div>
           )}
